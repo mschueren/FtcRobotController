@@ -27,7 +27,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package org.firstinspires.ftc.examplecode.ComputerVision;
+package org.firstinspires.ftc.mentorcode.RobotDownload;
 
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
@@ -35,7 +35,6 @@ import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import org.firstinspires.ftc.robotcore.external.ClassFactory;
 import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
 import org.firstinspires.ftc.robotcore.external.navigation.VuforiaLocalizer;
-import org.firstinspires.ftc.robotcore.external.navigation.VuforiaLocalizer.CameraDirection;
 import org.firstinspires.ftc.robotcore.external.tfod.Recognition;
 import org.firstinspires.ftc.robotcore.external.tfod.TFObjectDetector;
 
@@ -43,11 +42,11 @@ import java.util.List;
 
 @TeleOp(name = "TensorFlow Object Detection", group = "Example Computer Vision")
 //@Disabled
-public class ExampleTensorFlowObjectDetection extends OpMode {
+public class TFRingDetection extends OpMode {
     private static final String TFOD_MODEL_ASSET = "UltimateGoal.tflite";
     private static final String LABEL_QUAD_STACK = "Four Rings";
     private static final String LABEL_SINGLE_STACK = "One Ring";
-    private static final String VUFORIA_KEY = "AcZlc3n/////AAAAGWPeDCNLuk38gPuwF9cpyK2BYbGciGSeJy9AkSXPprQUEtg/VxgqB6j9WJuQvGo4pq+h4gwPSd134WD707FXnbuJjqdqkh5/92mATPs96WQ2RVoaU8QLbsJonufIl2T6qqqT83aOJHbz34mGJszad+Mw7VAWM11av5ltOoq8/rSKbmSFxAVi3d7oiT3saE0XBx4svhpGLwauy6Y0L7X0fC7FwHKCnw/RPL4V+Q8v2rtCTOwvjfnjxmRMind01HSWcxd9ppBwzvHVCPhePccnyWVv5jNiYXia9r4FlrJpAPgZ1GsCfdbt6AoT6Oh2Hnx267J+MHUnLi/C+0brvnQfcDregLBfnZApfd2c1WDiXJp/";
+    private static final String VUFORIA_KEY = "Ab8M6H3/////AAABmdrDvsbcC0ksuYYrZ7fMQA5bzewUDais0KZfQ2jodz1/ImE2HslZR2fWU92Fyis+Ia/+Zz7LqR6lo1WBamZ/77uvaatxododdQnfyLwSw9TKmebFAuLltTmkG65ZlwGps/xyddg6XlwlddG9TbbSiG9poHchV+CVGHZ242eAyfvEEhhfS8p2KYlFj3QHZ9R5pXkJj2mlzksbu+FLgokG1fKPLgll+DaBi8U+nxS5rnSXHT3ZHIWN8au9BWQyUeP+qp9b0OLxD0fQP3XEbXTQuNJuAhrl0DxFpYs/uUPKWq9p7KyPtWiLVt6NDNfOvvA3lNQCJWsyF7rLWoZeWXBTBp2Ll4p/tqY3nAvxzGZz0l7Z";
 
     private VuforiaLocalizer vuforia;
 
@@ -118,7 +117,7 @@ public class ExampleTensorFlowObjectDetection extends OpMode {
         VuforiaLocalizer.Parameters parameters = new VuforiaLocalizer.Parameters();
 
         parameters.vuforiaLicenseKey = VUFORIA_KEY;
-        parameters.cameraName = hardwareMap.get(WebcamName.class, "Webcam 1");
+        parameters.cameraName = hardwareMap.get(WebcamName.class, "Webcam1");
 
         //  Instantiate the Vuforia engine
         vuforia = ClassFactory.getInstance().createVuforia(parameters);
