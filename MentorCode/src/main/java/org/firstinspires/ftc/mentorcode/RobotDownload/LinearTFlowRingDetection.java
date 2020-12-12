@@ -87,6 +87,7 @@ public class LinearTFlowRingDetection extends LinearOpMode {
         }
 
         /** Wait for the game to begin */
+        //Use this statement instead of WaitforStart() to read the camera prior to hitting start
         while (!isStarted() && !isStopRequested()) {
 
             if (tfod != null) {
@@ -117,6 +118,8 @@ public class LinearTFlowRingDetection extends LinearOpMode {
             }
         }
 
+
+        //This will start once the Start button is pressed
         if (opModeIsActive()) {
             while (opModeIsActive()) {
                 telemetry.addData("Box", box.toString());
@@ -155,7 +158,7 @@ public class LinearTFlowRingDetection extends LinearOpMode {
         int tfodMonitorViewId = hardwareMap.appContext.getResources().getIdentifier(
             "tfodMonitorViewId", "id", hardwareMap.appContext.getPackageName());
         TFObjectDetector.Parameters tfodParameters = new TFObjectDetector.Parameters(tfodMonitorViewId);
-       tfodParameters.minResultConfidence = 0.8f;
+       //tfodParameters.minResultConfidence = 0.85f;
        tfod = ClassFactory.getInstance().createTFObjectDetector(tfodParameters, vuforia);
        tfod.loadModelFromAsset(TFOD_MODEL_ASSET, LABEL_FIRST_ELEMENT, LABEL_SECOND_ELEMENT);
     }

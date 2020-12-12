@@ -43,7 +43,7 @@ import java.util.List;
 
 @TeleOp(name = "TensorFlow Object Detection", group = "Example Computer Vision")
 //@Disabled
-public class ExampleTensorFlowObjectDetection extends OpMode {
+public class IterativeTFRingDetectionUltimateGoal extends OpMode {
     private static final String TFOD_MODEL_ASSET = "UltimateGoal.tflite";
     private static final String LABEL_QUAD_STACK = "Four Rings";
     private static final String LABEL_SINGLE_STACK = "One Ring";
