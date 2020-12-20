@@ -31,13 +31,13 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. */
 
 package org.firstinspires.ftc.examplecode.ComputerVision;
 
-import com.qualcomm.hardware.modernrobotics.ModernRoboticsI2cGyro;
+import com.qualcomm.hardware.bosch.BNO055IMU;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
-import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 
 import org.firstinspires.ftc.robotcore.external.ClassFactory;
+import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
 import org.firstinspires.ftc.robotcore.external.matrices.OpenGLMatrix;
 import org.firstinspires.ftc.robotcore.external.matrices.VectorF;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
@@ -49,252 +49,224 @@ import org.firstinspires.ftc.robotcore.external.navigation.VuforiaTrackable;
 import org.firstinspires.ftc.robotcore.external.navigation.VuforiaTrackableDefaultListener;
 import org.firstinspires.ftc.robotcore.external.navigation.VuforiaTrackables;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import static org.firstinspires.ftc.robotcore.external.navigation.AngleUnit.DEGREES;
+import static org.firstinspires.ftc.robotcore.external.navigation.AxesOrder.XYZ;
+import static org.firstinspires.ftc.robotcore.external.navigation.AxesReference.EXTRINSIC;
+import static org.firstinspires.ftc.robotcore.external.navigation.VuforiaLocalizer.CameraDirection.FRONT;
+
+
 @Autonomous(name = "Vuforia Drive to Target", group = "Vuforia")
-@Disabled
+//@Disabled
 
 public class ExampleVuforiaDriveToTarget extends OpMode {
-    private VuforiaLocalizer vuforiaLocalizer;
-    private VuforiaLocalizer.Parameters parameters;
-    private VuforiaTrackables velocityVortexImages;
-    private VuforiaTrackable wheelsTarget;
-    private VuforiaTrackable toolsTarget;
-    private VuforiaTrackable legosTarget;
-    private VuforiaTrackable gearsTarget;
-    private VuforiaTrackableDefaultListener wheelsListener;
-    private VuforiaTrackableDefaultListener toolsListener;
-    private VuforiaTrackableDefaultListener legosListener;
-    private VuforiaTrackableDefaultListener gearsListener;
 
-    public static final String TAG = "Vuforia Sample";
+    private VuforiaLocalizer vuforia = null;
+    private VuforiaTrackables targetsUltimateGoal;
+    List<VuforiaTrackable> allTrackables = new ArrayList<VuforiaTrackable>();
+    private VuforiaTrackable blueTowerGoalTarget;
+    private VuforiaTrackable redTowerGoalTarget;
+    private VuforiaTrackable redAllianceTarget;
+    private VuforiaTrackable blueAllianceTarget;
+    private VuforiaTrackable frontWallTarget;
 
-    private OpenGLMatrix lastLocation;
-    private OpenGLMatrix phoneLocation;
+    private OpenGLMatrix lastLocation = null;
+    private OpenGLMatrix cameraLocation;
     private OpenGLMatrix robotLocationTransform;
 
-    double driveDirection = 0;          //Direction the robot should move
+    WebcamName webcamName = null;
+
+    DcMotor frMotor, flMotor, brMotor, blMotor;
+    BNO055IMU imu;
+    Orientation gyroAngles;
+
+    private static final float mmPerInch = 25.4f;
+    private static final float mmFTCFieldWidth = (12 * 12) * mmPerInch;
+    private static final double desiredRobotHeading = -90;     //The direction the robot should be facing (-90 for tower goals, 90 for front wall, etc...)
+    private static final float desiredX = (mmFTCFieldWidth/2/mmPerInch) - 20;  //The X location the robot should drive to (input in Inches)
+    private static final float desiredY = -mmFTCFieldWidth/4/mmPerInch;                  //The Y Location the robot should drive to (input in Inches)
+
+    double driveDirection = 0, driveDirection360 = 0;   //Direction the robot should move
     double driveSpeed = 0;              //The speed the robot should move
     double driveRotation = 0;           //Causes the robot to rotate
-    short robotHeading = 90;             //The direction the robot should be facing
     double flPower = 0, frPower = 0, blPower = 0, brPower = 0;  //calculated motor powers
     double maxMotorPower = 0;           //Variable used to figure out the max motor power so all motors can be scaled between 0 and 1
-    float robotX, robotY, robotZ, robotAngle;
-    float mmPerInch = 25.4f;
-    float mmBotWidth = 18 * mmPerInch;            // ... or whatever is right for your robot
-    float mmFTCFieldWidth = (12 * 12 - 2) * mmPerInch;   // the FTC field is ~11'10" center-to-center of the glass panels
-    double maxSpeed = 0.2;              //Sets the max speed the robot will move
-    int intZValue = 0;
-
-    DcMotor frontRight;
-    DcMotor frontLeft;
-    DcMotor backRight;
-    DcMotor backLeft;
-    ModernRoboticsI2cGyro gyro;
-
+    float robotX, robotY, robotZ, robotAngle, x, y;
 
     @Override
     public void init() {
+        frMotor = hardwareMap.dcMotor.get("frontright");
+        flMotor = hardwareMap.dcMotor.get("frontleft");
+        brMotor = hardwareMap.dcMotor.get("backright");
+        blMotor = hardwareMap.dcMotor.get("backleft");
+
+        BNO055IMU.Parameters parameters = new BNO055IMU.Parameters();
+        parameters.angleUnit = BNO055IMU.AngleUnit.DEGREES;
+        imu = hardwareMap.get(BNO055IMU.class, "imu");
+        imu.initialize(parameters);
+
         vuforiaInit();
 
-        frontRight = hardwareMap.dcMotor.get("frMotor");
-        frontLeft = hardwareMap.dcMotor.get("flMotor");
-        backRight = hardwareMap.dcMotor.get("brMotor");
-        backLeft = hardwareMap.dcMotor.get("blMotor");
-
-        frontRight.setDirection(DcMotor.Direction.REVERSE);
-        backRight.setDirection(DcMotor.Direction.REVERSE);
-
-        frontRight.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        frontLeft.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        backRight.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        backLeft.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-
-        gyro = (ModernRoboticsI2cGyro)hardwareMap.gyroSensor.get("gyroMR");
+        telemetry.addData("Status:", "Robot is Initialized");
     }
 
 
     @Override
     public void init_loop() {
-        if (gyro.getIntegratedZValue() != 0) {
-            gyro.calibrate();
-        }
+        gyroAngles = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
+
     }
 
 
     @Override
     public void start() {
-        velocityVortexImages.activate();//Start tracking the data sets we care about.
-        robotLocationTransform = wheelsListener.getUpdatedRobotLocation();
+        targetsUltimateGoal.activate();//Start tracking the data sets we care about.
     }
 
 
     @Override
     public void loop() {
 
-        if (wheelsListener.isVisible()) {
-            robotLocationTransform = wheelsListener.getUpdatedRobotLocation();
-            robotHeading = 0;
-        } else if (toolsListener.isVisible()) {
-            robotLocationTransform = toolsListener.getUpdatedRobotLocation();
-            robotHeading = 90;
-        } else if (legosListener.isVisible()) {
-            robotLocationTransform = legosListener.getUpdatedRobotLocation();
-            robotHeading = 0;
-        } else if (gearsListener.isVisible()) {
-            robotLocationTransform = gearsListener.getUpdatedRobotLocation();
-            robotHeading = 90;
+        for (VuforiaTrackable trackable : allTrackables) {
+            if (((VuforiaTrackableDefaultListener)trackable.getListener()).isVisible()) {
+                telemetry.addData("Visible Target", trackable.getName());
+
+                // getUpdatedRobotLocation() will return null if no new information is available since
+                // the last time that call was made, or if the trackable is not currently visible.
+                robotLocationTransform = ((VuforiaTrackableDefaultListener)trackable.getListener()).getUpdatedRobotLocation();
+                if (robotLocationTransform != null) {
+                    lastLocation = robotLocationTransform;
+                }
+                break;
+            }
         }
 
-        //Determine if the robot needs to rotate and if so in what direction.
-        if (Math.abs(gyro.getIntegratedZValue() - robotHeading) > 5){
-            driveRotation = (robotHeading - gyro.getIntegratedZValue()) / (Math.abs(robotHeading - gyro.getIntegratedZValue()))  * .2;
-        } else {
-            driveRotation = 0;
-        }
+        if (robotLocationTransform != null) {
 
-        if (robotLocationTransform != null && lastLocation != robotLocationTransform) {
-            lastLocation = robotLocationTransform;
-
-            VectorF trans = robotLocationTransform.getTranslation();
+            VectorF trans = lastLocation.getTranslation();
 
             robotX = trans.get(0);
             robotY = trans.get(1);
             robotZ = trans.get(2);
-            robotAngle = Orientation.getOrientation(lastLocation, AxesReference.EXTRINSIC, AxesOrder.XYZ, AngleUnit.DEGREES).thirdAngle;
+            robotAngle = Orientation.getOrientation(lastLocation, EXTRINSIC, XYZ, DEGREES).thirdAngle;
+
+            //Get the desired drive direction and speed from Vuforia
+            //the values are scaled to meters.
+            y = - (robotY - (desiredY * mmPerInch));
+            x = - (robotX - (desiredX * mmPerInch));
+
+            //finding the hypotenuse to calculate drive speed
+            driveSpeed = Math.sqrt(y * y + x * x)/mmPerInch < 6 ? .25: .4;
+
+            driveDirection = Math.atan2(-x,y);
+            driveDirection360 = driveDirection >= 0 ? driveDirection : (2*Math.PI) + driveDirection;
+
+            //Determine if the robot needs to rotate and if so in what direction.
+            if (Math.abs(robotAngle - desiredRobotHeading) > 3) {
+                driveRotation = (desiredRobotHeading - robotAngle) * .01;
+            } else {
+                driveRotation = 0;
+            }
+
+            //Calculate the power for each motor to go the direction, speed and rotation gathered above
+            flPower = driveSpeed * Math.cos(driveDirection360 - Math.toRadians(robotAngle) + Math.PI / 4) - driveRotation;
+            frPower = driveSpeed * Math.sin(driveDirection360 - Math.toRadians(robotAngle) + Math.PI / 4) + driveRotation;
+            blPower = driveSpeed * Math.sin(driveDirection360 - Math.toRadians(robotAngle) + Math.PI / 4) - driveRotation;
+            brPower = driveSpeed * Math.cos(driveDirection360 - Math.toRadians(robotAngle) + Math.PI / 4) + driveRotation;
+
+            //Determine the maximum calulated motor power
+            maxMotorPower = Math.max(Math.max(Math.max(Math.abs(flPower), Math.abs(frPower)), Math.abs(blPower)), Math.abs(brPower));
+
+            //If any motor power is not in the range {-1, 1}, scale all motors to fit in the range and still move as directed
+            if (Math.abs(maxMotorPower) > 1) {
+                flPower = flPower / maxMotorPower;
+                frPower = frPower / maxMotorPower;
+                blPower = blPower / maxMotorPower;
+                brPower = brPower / maxMotorPower;
+            } else if (Math.abs(maxMotorPower) < .1 || (Math.sqrt(y * y + x * x)/mmPerInch) < 1){
+                flPower = 0;
+                frPower = 0;
+                blPower = 0;
+                brPower = 0;
+            }
+
+            //Set the actual motor powers
+            flMotor.setPower(flPower);
+            frMotor.setPower(frPower);
+            blMotor.setPower(blPower);
+            brMotor.setPower(brPower);
         }
 
-        //Get the desired drive direction and speed from Vuforia
-        //the values are scaled to meters.
-        float y = -robotY;
-        float x = -robotX;
+            // send the info back to driver station using telemetry function.
+            telemetry.addData("MotorLeft front", flPower);
+            telemetry.addData("MotorLeft back", blPower);
+            telemetry.addData("MotorRight front", frPower);
+            telemetry.addData("MotorRight back", brPower);
+            telemetry.addData("Drive Rotation", driveRotation);
+            telemetry.addData("Robot Heading", robotAngle);
+            telemetry.addData("Drive Speed", driveSpeed);
+            telemetry.addData("Drive Direction", Math.toDegrees(driveDirection360));
+            telemetry.addData("RobotX", robotX / mmPerInch);
+            telemetry.addData("RobotY", robotY / mmPerInch);
+            telemetry.addData("DriveX", x/ mmPerInch);
+            telemetry.addData("DriveY", y/ mmPerInch);
+            telemetry.addData("Pos", formatMatrix(lastLocation));
 
-        //finding the hypotenuse to calculate drive speed
-        driveSpeed = Math.sqrt(y * y + x * x);
-
-        //Find the drive direction is radians.  Java uses radians in its trig functions
-        if (x < 0 && y > 0) {
-            driveDirection = Math.atan(-x / y);
-        } else if (x < 0 && y == 0) {
-            driveDirection = Math.PI / 2;
-        } else if (x < 0 && y < 0) {
-            driveDirection = Math.atan(-y / -x) + (Math.PI / 2);
-        } else if (x == 0 && y < 0) {
-            driveDirection = Math.PI;
-        } else if (x > 0 && y < 0) {
-            driveDirection = Math.atan(x / -y) + Math.PI;
-        } else if (x > 0 && y == 0) {
-            driveDirection = Math.PI * 3 / 2;
-        } else if (x > 0 && y > 0) {
-            driveDirection = Math.atan(y / x) + (Math.PI * 3 / 2);
-        } else {
-            driveDirection = 0;
-        }
-
-
-
-        //Calculate the power for each motor to go the direction, speed and rotation gathered above
-        flPower = driveSpeed * Math.cos(driveDirection - Math.toRadians(gyro.getIntegratedZValue()) + Math.PI / 4) - driveRotation;
-        frPower = driveSpeed * Math.sin(driveDirection - Math.toRadians(gyro.getIntegratedZValue()) + Math.PI / 4) + driveRotation;
-        blPower = driveSpeed * Math.sin(driveDirection - Math.toRadians(gyro.getIntegratedZValue()) + Math.PI / 4) - driveRotation;
-        brPower = driveSpeed * Math.cos(driveDirection - Math.toRadians(gyro.getIntegratedZValue()) + Math.PI / 4) + driveRotation;
-
-        //Determine the maximum calulated motor power
-        maxMotorPower = Math.max(Math.max(Math.max(Math.abs(flPower), Math.abs(frPower)), Math.abs(blPower)), Math.abs(brPower));
-
-        //If any motor power is not in the range {-1, 1}, scale all motors to fit in the range and still move as directed
-        if (Math.abs(maxMotorPower) > 4) {
-            flPower = maxSpeed * flPower / maxMotorPower;
-            frPower = maxSpeed * frPower / maxMotorPower;
-            blPower = maxSpeed * blPower / maxMotorPower;
-            brPower = maxSpeed * brPower / maxMotorPower;
-        } else if(Math.abs(maxMotorPower) < .05) {
-            flPower = 0;
-            frPower = 0;
-            blPower = 0;
-            brPower = 0;
-        } else {
-            flPower = maxSpeed * flPower;
-            frPower = maxSpeed * frPower;
-            blPower = maxSpeed * blPower;
-            brPower = maxSpeed * brPower;
-        }
-
-        //Set the actual motor powers
-        frontLeft.setPower(flPower);
-        frontRight.setPower(frPower);
-        backLeft.setPower(blPower);
-        backRight.setPower(brPower);
-
-        // send the info back to driver station using telemetry function.
-        telemetry.addData("MotorLeft front", flPower);
-        telemetry.addData("MotorLeft back", blPower);
-        telemetry.addData("MotorRight front", frPower);
-        telemetry.addData("MotorRight back", brPower);
-        telemetry.addData("Drive Rotation", driveRotation);
-        telemetry.addData("Robot Heading", robotAngle);
-        telemetry.addData("Drive Speed", driveSpeed);
-        telemetry.addData("Drive Direction", Math.toDegrees(driveDirection));
-        telemetry.addData("RobotX", robotX);
-        telemetry.addData("RobotY", robotY);
-        telemetry.addData(wheelsTarget.getName(), wheelsListener.isVisible() ? "Visible" : "Not Visible");
-        telemetry.addData(toolsTarget.getName(), toolsListener.isVisible() ? "Visible" : "Not Visible");
-        telemetry.addData(legosTarget.getName(), legosListener.isVisible() ? "Visible" : "Not Visible");
-        telemetry.addData(gearsTarget.getName(), gearsListener.isVisible() ? "Visible" : "Not Visible");
-        telemetry.addData("Pos", formatMatrix(lastLocation));
     }
 
 
     @Override
     public void stop() {
-
+        targetsUltimateGoal.deactivate();
     }
 
     private void vuforiaInit() {
-        parameters = new VuforiaLocalizer.Parameters(com.qualcomm.ftcrobotcontroller.R.id.cameraMonitorViewId); // To remove the camera view from the screen, remove the R.id.cameraMonitorViewId
+        webcamName = hardwareMap.get(WebcamName.class, "Webcam1");
+
+        VuforiaLocalizer.Parameters parameters = new VuforiaLocalizer.Parameters();
+
+        parameters.cameraDirection = FRONT;
         parameters.vuforiaLicenseKey = "Ab8M6H3/////AAABmdrDvsbcC0ksuYYrZ7fMQA5bzewUDais0KZfQ2jodz1/ImE2HslZR2fWU92Fyis+Ia/+Zz7LqR6lo1WBamZ/77uvaatxododdQnfyLwSw9TKmebFAuLltTmkG65ZlwGps/xyddg6XlwlddG9TbbSiG9poHchV+CVGHZ242eAyfvEEhhfS8p2KYlFj3QHZ9R5pXkJj2mlzksbu+FLgokG1fKPLgll+DaBi8U+nxS5rnSXHT3ZHIWN8au9BWQyUeP+qp9b0OLxD0fQP3XEbXTQuNJuAhrl0DxFpYs/uUPKWq9p7KyPtWiLVt6NDNfOvvA3lNQCJWsyF7rLWoZeWXBTBp2Ll4p/tqY3nAvxzGZz0l7Z";
-        parameters.cameraDirection = VuforiaLocalizer.CameraDirection.FRONT;
         parameters.useExtendedTracking = false;
-        vuforiaLocalizer = ClassFactory.getInstance().createVuforia(parameters);
+        parameters.cameraName = webcamName;
+        vuforia = ClassFactory.getInstance().createVuforia(parameters);
 
         // These are the vision targets that we want to use
         // The string needs to be the name of the appropriate .xml file in the assets folder
-        velocityVortexImages = vuforiaLocalizer.loadTrackablesFromAsset("FTC_2016-17");
-        //Vuforia.setHint(HINT.HINT_MAX_SIMULTANEOUS_IMAGE_TARGETS, 4); //Will track all 4 images
+        targetsUltimateGoal = this.vuforia.loadTrackablesFromAsset("UltimateGoal");
 
         // Setup the targets to be tracked
-        wheelsTarget = velocityVortexImages.get(0);
-        wheelsTarget.setName("Wheels");
-        wheelsTarget.setLocation(createMatrix(0, 150, 0, 90, 0, 0));
+        blueTowerGoalTarget = targetsUltimateGoal.get(0);
+        blueTowerGoalTarget.setName("Blue Tower Goal Target");
+        blueTowerGoalTarget.setLocation(createMatrix(mmFTCFieldWidth/2, mmFTCFieldWidth/4, 0, 90, 0 ,-90));
 
-        toolsTarget = velocityVortexImages.get(1);
-        toolsTarget.setName("Tools");
-        toolsTarget.setLocation(createMatrix(-150, 0, 0, 90, 0 ,90));
+        redTowerGoalTarget = targetsUltimateGoal.get(1);
+        redTowerGoalTarget.setName("Red Tower Goal Target");
+        redTowerGoalTarget.setLocation(createMatrix(mmFTCFieldWidth/2, -mmFTCFieldWidth/4, 0, 90, 0 ,-90));
 
-        legosTarget = velocityVortexImages.get(2);
-        legosTarget.setName("Legos");
-        legosTarget.setLocation(createMatrix(0, 150, 0, 90, 0, 0));
+        redAllianceTarget = targetsUltimateGoal.get(2);
+        redAllianceTarget.setName("Red Alliance Target");
+        redAllianceTarget.setLocation(createMatrix(0, -mmFTCFieldWidth/2, 0, 90, 0 ,180));
 
-        gearsTarget = velocityVortexImages.get(3);
-        gearsTarget.setName("Gears");
-        gearsTarget.setLocation(createMatrix(-300, 0, 0, 90, 0, 90));
+        blueAllianceTarget = targetsUltimateGoal.get(3);
+        blueAllianceTarget.setName("Blue Alliance Target");
+        blueAllianceTarget.setLocation(createMatrix(0, mmFTCFieldWidth/2, 0, 90, 0 ,0));
 
+        frontWallTarget = targetsUltimateGoal.get(4);
+        frontWallTarget.setName("Front Wall Target");
+        frontWallTarget.setLocation(createMatrix(-mmFTCFieldWidth/2, 0, 0, 90, 0 ,90));
+
+        allTrackables.addAll(targetsUltimateGoal);
 
         // Set phone location on robot
-        phoneLocation = createMatrix(0, 0, 0, 90, 0, 180);
+        cameraLocation = createMatrix(0, 0, 0, 90, 0, 180);
 
-        /**
-         * Let the trackable listeners we care about know where the phone is. We know that each
-         * listener is a {@link VuforiaTrackableDefaultListener} and can so safely cast because
-         * we have not ourselves installed a listener of a different type.
-         */
-        wheelsListener = (VuforiaTrackableDefaultListener) wheelsTarget.getListener();
-        wheelsListener.setPhoneInformation(phoneLocation, parameters.cameraDirection);
-        toolsListener = (VuforiaTrackableDefaultListener) toolsTarget.getListener();
-        toolsListener.setPhoneInformation(phoneLocation, parameters.cameraDirection);
-        legosListener = (VuforiaTrackableDefaultListener) legosTarget.getListener();
-        legosListener.setPhoneInformation(phoneLocation, parameters.cameraDirection);
-        gearsListener = (VuforiaTrackableDefaultListener) gearsTarget.getListener();
-        gearsListener.setPhoneInformation(phoneLocation, parameters.cameraDirection);
-
+        //  Let all the trackable listeners know where the camera is.
+        for (VuforiaTrackable trackable : allTrackables) {
+            ((VuforiaTrackableDefaultListener) trackable.getListener()).setCameraLocationOnRobot(webcamName, cameraLocation);
+        }
 
         lastLocation = createMatrix(0, 0, 0, 0, 0, 0);
     }
@@ -307,7 +279,7 @@ public class ExampleVuforiaDriveToTarget extends OpMode {
     {
         return OpenGLMatrix.translation(x, y, z).
                 multiplied(Orientation.getRotationMatrix(
-                        AxesReference.EXTRINSIC, AxesOrder.XYZ, AngleUnit.DEGREES, u, v, w));
+                        EXTRINSIC, XYZ, DEGREES, u, v, w));
     }
 
     /**

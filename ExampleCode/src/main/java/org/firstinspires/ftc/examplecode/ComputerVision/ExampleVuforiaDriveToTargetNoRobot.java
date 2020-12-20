@@ -29,7 +29,7 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. */
 
-package org.firstinspires.ftc.mentorcode.RobotDownload;
+package org.firstinspires.ftc.examplecode.ComputerVision;
 
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
@@ -53,10 +53,10 @@ import static org.firstinspires.ftc.robotcore.external.navigation.AxesReference.
 import static org.firstinspires.ftc.robotcore.external.navigation.VuforiaLocalizer.CameraDirection.FRONT;
 
 
-@Autonomous(name = "Vuforia Drive to Origin No Bot", group = "Vuforia")
+@Autonomous(name = "Vuforia Drive to Target No Bot", group = "Vuforia")
 //@Disabled
 
-public class ExampleVuforiaDriveToOriginNoRobot extends OpMode {
+public class ExampleVuforiaDriveToTargetNoRobot extends OpMode {
 
     private VuforiaLocalizer vuforia = null;
     private VuforiaTrackables targetsUltimateGoal;
@@ -73,21 +73,22 @@ public class ExampleVuforiaDriveToOriginNoRobot extends OpMode {
 
     WebcamName webcamName = null;
 
+    private static final float mmPerInch = 25.4f;
+    private static final float mmFTCFieldWidth = (12 * 12) * mmPerInch;
+    private static final double desiredRobotHeading = -90;     //The direction the robot should be facing (-90 for tower goals, 90 for front wall, etc...)
+    private static final float desiredX = (mmFTCFieldWidth/2/mmPerInch) - 20;  //The X location the robot should drive to (input in Inches)
+    private static final float desiredY = -mmFTCFieldWidth/4/mmPerInch;                  //The Y Location the robot should drive to (input in Inches)
+
     double driveDirection = 0, driveDirection360 = 0;   //Direction the robot should move
     double driveSpeed = 0;              //The speed the robot should move
     double driveRotation = 0;           //Causes the robot to rotate
-    double desiredRobotHeading = 0;             //The direction the robot should be facing
     double flPower = 0, frPower = 0, blPower = 0, brPower = 0;  //calculated motor powers
     double maxMotorPower = 0;           //Variable used to figure out the max motor power so all motors can be scaled between 0 and 1
     float robotX, robotY, robotZ, robotAngle, x, y;
-    private static final float mmPerInch = 25.4f;
-    private static final float mmTargetHeight   = (6) * mmPerInch;
-    float mmFTCFieldWidth = (12 * 12) * mmPerInch;   // the FTC field is ~11'10" center-to-center of the glass panels
+
 
     @Override
-    public void init() {
-        vuforiaInit();
-    }
+    public void init() { vuforiaInit();  }
 
 
     @Override
@@ -128,8 +129,8 @@ public class ExampleVuforiaDriveToOriginNoRobot extends OpMode {
 
             //Get the desired drive direction and speed from Vuforia
             //the values are scaled to meters.
-            y = - robotY;
-            x = - robotX;
+            y = - (robotY - (desiredY * mmPerInch));
+            x = - (robotX - (desiredX * mmPerInch));
 
             //finding the hypotenuse to calculate drive speed
             driveSpeed = Math.sqrt(y * y + x * x)/mmPerInch < 6 ? .25: .4;
@@ -138,7 +139,7 @@ public class ExampleVuforiaDriveToOriginNoRobot extends OpMode {
             driveDirection360 = driveDirection >= 0 ? driveDirection : (2*Math.PI) + driveDirection;
 
             //Determine if the robot needs to rotate and if so in what direction.
-            if (Math.abs(robotAngle - Math.toDegrees(desiredRobotHeading)) > 3) {
+            if (Math.abs(robotAngle - desiredRobotHeading) > 3) {
                 driveRotation = (desiredRobotHeading - robotAngle) * .02;
             } else {
                 driveRotation = 0;
@@ -207,23 +208,23 @@ public class ExampleVuforiaDriveToOriginNoRobot extends OpMode {
         // Setup the targets to be tracked
         blueTowerGoalTarget = targetsUltimateGoal.get(0);
         blueTowerGoalTarget.setName("Blue Tower Goal Target");
-        blueTowerGoalTarget.setLocation(createMatrix(0, 12*mmPerInch, 0, 90, 0 ,0));
+        blueTowerGoalTarget.setLocation(createMatrix(mmFTCFieldWidth/2, mmFTCFieldWidth/4, 0, 90, 0 ,-90));
 
         redTowerGoalTarget = targetsUltimateGoal.get(1);
         redTowerGoalTarget.setName("Red Tower Goal Target");
-        redTowerGoalTarget.setLocation(createMatrix(0, 12*mmPerInch, 0, 90, 0 ,0));
+        redTowerGoalTarget.setLocation(createMatrix(mmFTCFieldWidth/2, -mmFTCFieldWidth/4, 0, 90, 0 ,-90));
 
         redAllianceTarget = targetsUltimateGoal.get(2);
         redAllianceTarget.setName("Red Alliance Target");
-        redAllianceTarget.setLocation(createMatrix(0, 12*mmPerInch, 0, 90, 0 ,0));
+        redAllianceTarget.setLocation(createMatrix(0, -mmFTCFieldWidth/2, 0, 90, 0 ,180));
 
         blueAllianceTarget = targetsUltimateGoal.get(3);
         blueAllianceTarget.setName("Blue Alliance Target");
-        blueAllianceTarget.setLocation(createMatrix(0, 12*mmPerInch, 0, 90, 0 ,0));
+        blueAllianceTarget.setLocation(createMatrix(0, mmFTCFieldWidth/2, 0, 90, 0 ,0));
 
         frontWallTarget = targetsUltimateGoal.get(4);
         frontWallTarget.setName("Front Wall Target");
-        frontWallTarget.setLocation(createMatrix(0, 12*mmPerInch, 0, 90, 0 ,0));
+        frontWallTarget.setLocation(createMatrix(-mmFTCFieldWidth/2, 0, 0, 90, 0 ,90));
 
         allTrackables.addAll(targetsUltimateGoal);
 
