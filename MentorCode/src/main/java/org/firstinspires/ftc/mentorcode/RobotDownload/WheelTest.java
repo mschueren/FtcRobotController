@@ -64,7 +64,8 @@ public class WheelTest extends OpMode
         brMotor = hardwareMap.dcMotor.get("backright");
         blMotor = hardwareMap.dcMotor.get("backleft");
 
-        frMotor.setDirection(DcMotor.Direction.FORWARD);
+        flMotor.setDirection(DcMotor.Direction.REVERSE);
+        blMotor.setDirection(DcMotor.Direction.REVERSE);
 
         // Tell the driver that initialization is complete.
         telemetry.addData("Status", "Initialized");
@@ -96,6 +97,36 @@ public class WheelTest extends OpMode
             brMotor.setPower(.3);
         } else if(gamepad1.a){
             blMotor.setPower(.3);
+        } else if(gamepad1.dpad_up){
+            frMotor.setPower(.3);
+            flMotor.setPower(.3);
+            brMotor.setPower(.3);
+            blMotor.setPower(.3);
+        } else if(gamepad1.dpad_down){
+            frMotor.setPower(-.3);
+            flMotor.setPower(-.3);
+            brMotor.setPower(-.3);
+            blMotor.setPower(-.3);
+        } else if(gamepad1.dpad_right){
+            frMotor.setPower(-.3);
+            flMotor.setPower(.3);
+            brMotor.setPower(-.3);
+            blMotor.setPower(.3);
+        } else if(gamepad1.dpad_left) {
+            frMotor.setPower(.3);
+            flMotor.setPower(-.3);
+            brMotor.setPower(.3);
+            blMotor.setPower(-.3);
+        } else if(gamepad1.right_trigger > .1){
+            frMotor.setPower(0);
+            flMotor.setPower(gamepad1.right_trigger);
+            brMotor.setPower(gamepad1.right_trigger);
+            blMotor.setPower(0);
+        } else if(gamepad1.left_trigger > .1) {
+            frMotor.setPower(gamepad1.left_trigger);
+            flMotor.setPower(0);
+            brMotor.setPower(0);
+            blMotor.setPower(gamepad1.left_trigger);
         } else {
             frMotor.setPower(0);
             flMotor.setPower(0);
@@ -103,11 +134,23 @@ public class WheelTest extends OpMode
             blMotor.setPower(0);
         }
 
+        String rightDirections = "Front Motor = " + frMotor.getDirection().toString() +
+                                    " - Back Motor = " + brMotor.getDirection().toString();
         // Show the wheel power.
         telemetry.addData("Motor FR (y)", frMotor.getPower());
-        telemetry.addData("Motor FL (x)", flMotor.getPower());
         telemetry.addData("Motor BR (b)", brMotor.getPower());
+        telemetry.addData("Motor FL (x)", flMotor.getPower());
         telemetry.addData("Motor BL (a)", blMotor.getPower());
+        telemetry.addData("Move Forward (Dpad Up)", "");
+        telemetry.addData("Move Backwards (Dpad Down)", "");
+        telemetry.addData("Rotate Clockwise (Dpad Right)", "");
+        telemetry.addData("Rotate Counter-Clockwise (Dpad Left)", "");
+        telemetry.addData("Move Diagonal Forward Right (Right Trigger)", "");
+        telemetry.addData("Move Diagonal Forward Left (Left Trigger)", "");
+        telemetry.addData("Front Right Motor Direction", frMotor.getDirection().toString());
+        telemetry.addData("Back Right Motor Direction", brMotor.getDirection().toString());
+        telemetry.addData("Front Left Motor Direction", flMotor.getDirection().toString());
+        telemetry.addData("Back Left Motor Direction", blMotor.getDirection().toString());
     }
 
     /*
