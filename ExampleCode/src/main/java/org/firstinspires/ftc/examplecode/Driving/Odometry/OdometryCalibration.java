@@ -19,6 +19,9 @@ import java.io.File;
 public class OdometryCalibration extends LinearOpMode {
 
     final double PIVOT_SPEED = 0.5;
+    private double leftEncoderDirection = -1;
+    private double rightEncoderDirection = 1;
+    private double backEncoderDirection = 1;
 
     ElapsedTime timer = new ElapsedTime();
 
@@ -72,7 +75,7 @@ public class OdometryCalibration extends LinearOpMode {
         Since the left encoder is also mapped to a drive motor, the encoder value needs to be reversed with the negative sign in front
         THIS MAY NEED TO BE CHANGED FOR EACH ROBOT
        */
-        double encoderDifference = Math.abs(robot.verticalLeft.getCurrentPosition()) - (Math.abs(robot.verticalRight.getCurrentPosition()));
+        double encoderDifference = Math.abs(robot.verticalLeft.getCurrentPosition()) + (Math.abs(robot.verticalRight.getCurrentPosition()));
 
         double verticalEncoderTickOffsetPerDegree = encoderDifference/angle;
 

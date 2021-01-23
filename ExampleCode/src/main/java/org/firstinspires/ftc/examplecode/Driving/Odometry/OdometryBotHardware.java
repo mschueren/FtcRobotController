@@ -37,7 +37,7 @@ public class OdometryBotHardware {
     String lfName = "frontleft", rfName = "frontright", lbName = "backleft", rbName = "backright";
     String verticalLeftEncoderName = rbName, verticalRightEncoderName = lfName, horizontalEncoderName = rfName;
     //The amount of encoder ticks for each inch the robot moves. THIS WILL CHANGE FOR EACH ROBOT AND NEEDS TO BE UPDATED HERE
-    final double COUNTS_PER_INCH = 307.699557;
+    final double COUNTS_PER_INCH = 435.74278;
 
     /* Local OpMode members. */
     HardwareMap hwMap  = null;
